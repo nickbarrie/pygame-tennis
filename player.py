@@ -48,7 +48,7 @@ class Player:
         pygame.draw.rect(screen, RED, swing_area)  
     
     def is_ball_in_swing_area(self, ball):
-        swing_area = pygame.Rect(self.x + self.width, self.y, 40, 20)
+        swing_area = pygame.Rect(self.x + self.width, self.y, 400, 200)
         ball_rect = pygame.Rect(ball.x - ball.radius, ball.y - ball.radius, ball.radius * 2, ball.radius * 2)
         return swing_area.colliderect(ball_rect) > 0
     

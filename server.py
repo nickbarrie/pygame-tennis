@@ -49,39 +49,42 @@ class GameServer:
         """ Check if the ball is still in play"""
             # Out of bounds horizontally (left or right)
         if self.ball.x < 0 or self.ball.x > WINDOW_WIDTH:
-            self.ball.reset_ball()
-            print("Ball out of bounds")
-            if self.ball.speed_y > 0:  # Ball was moving towards player 2's side
+            print("Ball out of bounds horizontally")
+            if self.ball.speed_y < 0:  # Ball was moving towards player 2's side
                 self.handle_point_scored(self.player_1)
             else:  # Ball was moving towards player 1's side
                 self.handle_point_scored(self.player_2)
+            self.ball.reset_ball()
 
         # Out of bounds vertically (top or bottom)
         elif self.ball.y < 0 or self.ball.y > WINDOW_HEIGHT:
-            self.ball.reset_ball()
-            print("Ball out of bounds")
-            if self.ball.y < 0:  # Ball hit out on player 1's side
+            
+            print("Ball out of bounds vertically")
+            if self.ball.speed_y < 0:  # Ball hit out on player 1's side
                 self.handle_point_scored(self.player_2)
             else:  # Ball hit out on player 2's side
                 self.handle_point_scored(self.player_1)
+            self.ball.reset_ball()
         
         # Net collision
         elif self.ball.check_net_collision(self.net):  # Ball hit the net and did not cross it
-            self.ball.reset_ball()
+            
             print("Ball hit the net")
-            if self.ball.speed_y < 0:  # ball bounces backwards to player 2's side
+            if self.ball.speed_y > 0:  # ball bounces backwards to player 2's side
                 self.handle_point_scored(self.player_1)
             else:  # Ball was moving towards player 1's side
                 self.handle_point_scored(self.player_2)
+            self.ball.reset_ball()
 
         # Check for multiple bounces
         elif self.ball.bounce_count > 1:  # If ball bounces more than once
-            self.ball.reset_ball()
+            
             print("Ball bounced more than once")
-            if self.ball.y > 0:  # Player 1 hit the ball last, so Player 1 wins the point
+            if self.ball.speed_y < 0:   # Player 1 hit the ball last, so Player 1 wins the point
                 self.handle_point_scored(self.player_1)
             else:  # Player 2 hit the ball last, so Player 1 wins the point
-                self.handle_point_scored(self.player_1)
+                self.handle_point_scored(self.player_2)
+            self.ball.reset_ball()
         
         # Ball is still in play
         else:
@@ -112,9 +115,15 @@ class GameServer:
             self.ball.move()
             self.check_ball_in_play()
 
-
+        print("can be hit", self.ball.can_be_hit())
+        print("player 1 swing area", self.player_1.is_ball_in_swing_area(self.ball))
+        print("player 2 swing area", self.player_2.is_ball_in_swing_area(self.ball))
+        print("player 1 swinging", self.game_state['players'][0]['swinging'])
+        print("player 2 swinging", self.game_state['players'][1]['swinging'])
+        
         # Player 1 Swinging Logic
         if self.player_1.is_ball_in_swing_area(self.ball) and self.ball.can_be_hit() and self.game_state['players'][0]['swinging']:
+            print("Player 1 hit the ball")
             self.ball.speed_y = self.player_1.swing_speed_y * self.player_1.side
             self.ball.speed_x = self.player_1.swing_speed_x * Random.choice([-1, 1])
             self.ball.speed_z = self.player_1.swing_speed_z
@@ -122,6 +131,7 @@ class GameServer:
 
         # Player 2 (or AI) Swinging Logic
         if self.player_2.is_ball_in_swing_area(self.ball) and self.ball.can_be_hit() and self.game_state['players'][1]['swinging']:
+            print("Player 2 hit the ball")
             self.ball.speed_y = self.player_2.swing_speed_y * self.player_2.side
             self.ball.speed_x = self.player_2.swing_speed_x * Random.choice([-1, 1])
             self.ball.speed_z = self.player_2.swing_speed_z

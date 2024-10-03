@@ -87,6 +87,10 @@ class Game:
             self.local_player = self.ai_player  # Player 2
             self.remote_player = self.player  # Player 1 (opponent)
 
+    def load_single_player(self):
+        """ Load single player game state """
+        self.local_player = self.player
+
     def send_player_data(self):
         """ Send player data to the server """
         player_data = {
@@ -258,6 +262,8 @@ def game_loop(game_state):
             game.update_game_multiplayer()
             game.draw_game()
         elif game_state == "GAME":
+            if not game.local_player:
+                game.load_single_player()
             game.handle_game_events()
             game.update_game()
             game.draw_game()
