@@ -18,6 +18,7 @@ class Ball:
         self.last_hit_time = 0 
         self.hit_cooldown = 500  
         self.bounce_count = 0
+        self.in_play = False
 
     def check_net_collision(self, net):
         if self.z <= net.height:
@@ -28,9 +29,12 @@ class Ball:
                 self.speed_y *= -0.2
                 self.speed_z *= -0.2  # Simulate a bounce upward if needed
                 self.z = net.height + 1
+                return True
+        return False
 
     def serve(self, speed_x, speed_y, speed_z, player_x, player_y):
         if not self.served:
+            print("Ball served")
             self.x = player_x
             self.y = player_y
             self.z = 1
@@ -102,3 +106,5 @@ class Ball:
         self.speed_y = 0
         self.speed_z = 0
         self.served = False  # Ready for the next serve
+        self.bounce_count = 0
+        self.in_play = False

@@ -18,12 +18,12 @@ class Menu:
         self.screen.blit(start_text, (WINDOW_WIDTH // 2 - start_text.get_width() // 2, 300))
 
         # Draw "Instructions" button
-        instructions_text = self.font.render("Instructions", True, (255, 255, 255))
+        instructions_text = self.font.render("Multiplayer", True, (255, 255, 255))
         self.screen.blit(instructions_text, (WINDOW_WIDTH // 2 - instructions_text.get_width() // 2, 400))
 
         pygame.display.flip()  # Update the screen
 
-    def handle_menu_events(self):
+    def handle_menu_events(self, game_state):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -33,8 +33,11 @@ class Menu:
                 mouse_pos = pygame.mouse.get_pos()
 
                 # Check if "Start Game" button was clicked
-                if 300 < mouse_pos[1] < 350:  # Adjust these coordinates
-                    self.set_state("GAME")  # Change to game state
+                if 300 < mouse_pos[1] < 350:  
+                   print("SINGLE Game button clicked")
+                   return "GAME"  # Change to game state
                 # Check if "Instructions" button was clicked
                 elif 400 < mouse_pos[1] < 450:
-                    self.set_state("INSTRUCTIONS")  # Change to instructions state
+                    print("Multiplayer Game button clicked")
+                    return "MULTIPLAYER"  # Change to instructions state
+        return game_state

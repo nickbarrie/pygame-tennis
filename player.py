@@ -18,6 +18,7 @@ class Player:
         self.serve_speed_multiplier = 2
         self.side = side # 1 for top -1 for bottom
         self.score = 0
+        self.serving = False
 
     def move(self, keys):
         if keys[pygame.K_w]:  # Move up
