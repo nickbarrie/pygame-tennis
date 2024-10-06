@@ -1,12 +1,13 @@
 import pygame
-from settings import WINDOW_WIDTH, WINDOW_HEIGHT, WHITE
+from settings import WINDOW_WIDTH, WINDOW_HEIGHT, WHITE, SCALE_FACTOR, SPRITE_WIDTH, GRAY
 
 
-class Ball:
+class Ball(pygame.sprite.Sprite):
 
     
 
-    def __init__(self, x, y, z, radius):
+    def __init__(self,sprite_sheet, x, y, z, radius):
+        super().__init__()
         self.x = x
         self.y = y
         self.z = z
@@ -19,6 +20,17 @@ class Ball:
         self.hit_cooldown = 500  
         self.bounce_count = 0
         self.in_play = False
+        self.angle = 0
+       
+        if sprite_sheet is not None:
+            self.image = pygame.Surface((SPRITE_WIDTH, SPRITE_WIDTH), pygame.SRCALPHA)
+            self.image.blit(sprite_sheet, (0, 0), (5 * SPRITE_WIDTH, 0, SPRITE_WIDTH, SPRITE_WIDTH))
+
+            self.rect = self.image.get_rect()  # Create a rect from the image size
+            self.rect.center = (x, y)  # Set initial position
+        else:
+            self.rect = pygame.Rect(x - radius, y - radius, radius , radius )
+            self.rect.center = (x, y)
 
     def check_net_collision(self, net):
         if self.z <= net.height:
@@ -69,14 +81,25 @@ class Ball:
             self.speed_z *= -0.8
             self.bounce_count += 1 
 
+    def apply_spin(self):
+        if self.speed_y > 0:
+            self.angle -= 5  # Spin clockwise when moving down
+        else:
+            self.angle += 5  # Spin counter-clockwise when moving up
+
+        self.angle %= 360
+
     def move(self):
         self.x += self.speed_x
         self.y += self.speed_y
         self.z += self.speed_z
 
+        self.rect.center = (self.x, self.y)
+
         self.apply_bounce()
         self.apply_friction()
         self.apply_gravity()
+        self.apply_spin()
             
 
     def scale_radius(self, min_z, max_z, min_radius, max_radius):
@@ -84,12 +107,36 @@ class Ball:
         return min_radius + (max_radius - min_radius) * ((z - min_z) / (max_z - min_z))
 
     def draw(self,screen):
+        
         min_z = 0
         max_z = 100
         min_radius = 10
         max_radius = 30
         scaled_radius = self.scale_radius(min_z, max_z, min_radius, max_radius)
-        pygame.draw.circle(screen, WHITE, (int(self.x), int(self.y)), int(scaled_radius))
+
+
+        scaled_image = pygame.transform.scale(self.image, (int(SCALE_FACTOR * scaled_radius), int(SCALE_FACTOR * scaled_radius)))
+        scaled_rotated_image = pygame.transform.rotate(scaled_image, self.angle)
+        rotated_rect = scaled_rotated_image.get_rect(center=(self.x, self.y))
+
+
+            # Draw the shadow
+        shadow_width = int(scaled_radius * (2 - self.z / max_z))  # Shadow gets smaller as the ball goes higher
+        shadow_height = int(scaled_radius * .7 * (1.2 - self.z / max_z))  # Shadow height also reduces
+        shadow_color = (0, 0, 0, int(150 * (1 - self.z / max_z)))  # Shadow gets more transparent as the ball rises
+        
+        # Create a surface for the shadow with alpha transparency
+        shadow_surface = pygame.Surface((shadow_width, shadow_height), pygame.SRCALPHA)
+        pygame.draw.ellipse(shadow_surface, shadow_color, shadow_surface.get_rect())
+        
+        # Calculate shadow position (directly below the ball)
+        shadow_x = self.x - shadow_width // 2
+        shadow_y = self.y + scaled_radius // 2 + self.z * SCALE_FACTOR  # The shadow is slightly below the ball's y-position
+        
+        # Draw the shadow on the screen
+        screen.blit(shadow_surface, (shadow_x, shadow_y))
+
+        screen.blit(scaled_rotated_image, rotated_rect.topleft)
 
     def can_be_hit(self):
         current_time = pygame.time.get_ticks()

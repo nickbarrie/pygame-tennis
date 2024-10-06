@@ -11,25 +11,26 @@ from settings import *
 from menu import Menu
 
 class Game:
-    def __init__(self, screen, ball_x ,ball_y, ball_z, ball_radius):
+    def __init__(self, screen, sprite_sheet, ball_x ,ball_y, ball_z, ball_radius):
 
       
 
         self.net_width = WINDOW_WIDTH // 2
-        self.net_height = 10  # Half of the window height
+        self.net_height = 16  # Half of the window height
 
         # Main game loop
         self.clock = pygame.time.Clock()
 
-        self.player = Player(WINDOW_WIDTH // 2, 50, 4, 1)
+        self.top_player = Player(sprite_sheet,WINDOW_WIDTH // 2, 50, 4, 1)
 
-        self.ai_player = AIPlayer(WINDOW_WIDTH // 2, WINDOW_HEIGHT - 100 // 2, 4, -1)
+        self.bottom_player = AIPlayer(sprite_sheet,WINDOW_WIDTH // 2, WINDOW_HEIGHT - 100 // 2, 4, -1)
 
-        self.ball = Ball(ball_x ,ball_y, ball_z, ball_radius)
+        self.ball = Ball(sprite_sheet, ball_x ,ball_y, ball_z, ball_radius)
 
         self.power_bar = PowerBar(50, 50, 20, 150, 0, 100)
 
-        self.net = Net(self.net_width, self.net_height)
+        self.net = Net(sprite_sheet, self.net_width, self.net_height)
+
 
         self.font = pygame.font.Font('silkscreen.ttf', 36)
         self.screen = screen
@@ -43,14 +44,28 @@ class Game:
         self.client = None
         self.player_id = 0  # Player's ID (0 or 1 for multiplayer)
 
+        self.grass_sprite = self.get_sprite(sprite_sheet, 48, 0, 16, 16)
+
     def set_state(self, new_state):
         self.game_state = new_state
 
+    def get_sprite(self, sprite_sheet, x, y, width, height):
+        """Extracts a sprite from the sprite sheet."""
+        sprite = pygame.Surface((width, height), pygame.SRCALPHA)
+        sprite.blit(sprite_sheet, (0, 0), (x, y, width, height))
+        return sprite
+
+    def draw_grass(self):
+        """Fill the screen with the grass sprite."""
+        scaled_image = pygame.transform.scale(self.grass_sprite, (16 * SCALE_FACTOR * 3, 16 * SCALE_FACTOR * 3))
+        for y in range(0, WINDOW_HEIGHT, 16 * SCALE_FACTOR * 3):  # Step by sprite height
+            for x in range(-32, WINDOW_WIDTH, 16 * SCALE_FACTOR * 3):  # Step by sprite width
+                self.screen.blit(scaled_image, (x, y))  # Draw grass at (x, y)
     
     def draw_scores(self):
         # Render the text for both player and AI scores
-        player_text = self.font.render(f"Player: {self.player.score}", True, WHITE)
-        ai_text = self.font.render(f"AI: {self.ai_player.score}", True, WHITE)
+        player_text = self.font.render(f"Player: {self.top_player.score}", True, WHITE)
+        ai_text = self.font.render(f"AI: {self.bottom_player.score}", True, WHITE)
 
         # Display the scores in the top left and right corners
         self.screen.blit(player_text, (50, 20))
@@ -58,38 +73,38 @@ class Game:
 
     def check_point(self):
         if self.ball.y < 0:
-            self.ai_player.score += 1
+            self.bottom_player.score += 1
             self.ball.reset_ball()
 
         if self.ball.y > WINDOW_HEIGHT:
-            self.player.score += 1
+            self.top_player.score += 1
             self.ball.reset_ball()
 
         # if ball bouces outside the court
         if (self.ball.x > self.net.x + self.net.width or self.ball.x < self.net.x) and self.ball.z <= 1:
             if self.ball.speed_y > 0:
-                self.ai_player.score += 1
+                self.bottom_player.score += 1
             else:
-                self.player.score += 1
+                self.top_player.score += 1
             self.ball.reset_ball()
 
     def connect_to_server(self):
         """ Connect to the multiplayer server """
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client.connect(('localhost', 5555))  # Connect to the server
+        self.client.connect(('172.20.0.84', 5555))  # Connect to the server
         self.player_id = pickle.loads(self.client.recv(2048))  # Receive player ID from the server
         print(f"Connected to the server as player {self.player_id}")
 
         if self.player_id == 0:
-            self.local_player = self.player  # Player 1
-            self.remote_player = self.ai_player  # Player 2 (opponent)
+            self.local_player = self.top_player  # Player 1
+            self.remote_player = self.bottom_player  # Player 2 (opponent)
         else:
-            self.local_player = self.ai_player  # Player 2
-            self.remote_player = self.player  # Player 1 (opponent)
+            self.local_player = self.bottom_player  # Player 2
+            self.remote_player = self.top_player  # Player 1 (opponent)
 
     def load_single_player(self):
         """ Load single player game state """
-        self.local_player = self.player
+        self.local_player = self.top_player
 
     def send_player_data(self):
         """ Send player data to the server """
@@ -146,6 +161,7 @@ class Game:
             self.ball.y = game_state['ball']['y']
             self.ball.z = game_state['ball']['z']
             self.ball.served = game_state['ball']['served']
+            self.ball.angle = game_state['ball']['angle']
 
             self.check_point()
 
@@ -186,8 +202,8 @@ class Game:
 
 
     def update_game(self):
-        self.ai_player.update_ai(self.ball)
-        self.ai_player.update_swing()
+        self.bottom_player.update_ai(self.ball)
+        self.bottom_player.update_swing()
 
         if self.local_player.serving:
             self.ball.served = False
@@ -197,31 +213,31 @@ class Game:
             self.ball.move()
             self.ball.check_net_collision(self.net)
 
-        if self.player.is_ball_in_swing_area(self.ball) and self.ball.can_be_hit() and self.player.swinging:
-            self.ball.speed_y = self.player.swing_speed_y * self.player.side
-            self.ball.speed_x = self.player.swing_speed_x * Random().choice([-1, 1])
-            self.ball.speed_z = self.player.swing_speed_z
+        if self.top_player.is_ball_in_swing_area(self.ball) and self.ball.can_be_hit() and self.top_player.swinging:
+            self.ball.speed_y = self.top_player.swing_speed_y * self.top_player.side
+            self.ball.speed_x = self.top_player.swing_speed_x * Random().choice([-1, 1])
+            self.ball.speed_z = self.top_player.swing_speed_z
             self.ball.register_hit()
 
-        if self.ai_player.is_ball_in_swing_area(self.ball) and self.ball.can_be_hit():
-            self.ai_player.start_swing()
-            self.ball.speed_y = self.ai_player.swing_speed_y * self.ai_player.side
-            self.ball.speed_x = self.ai_player.swing_speed_x * Random().choice([-1, 1])
-            self.ball.speed_z = self.ai_player.swing_speed_z
+        if self.bottom_player.is_ball_in_swing_area(self.ball) and self.ball.can_be_hit():
+            self.bottom_player.start_swing()
+            self.ball.speed_y = self.bottom_player.swing_speed_y * self.bottom_player.side
+            self.ball.speed_x = self.bottom_player.swing_speed_x * Random().choice([-1, 1])
+            self.ball.speed_z = self.bottom_player.swing_speed_z
             self.ball.register_hit()
 
         self.check_point()
 
     def draw_game(self):
         # Fill the screen with black
-        self.screen.fill(BLACK)
+        self.draw_grass()
 
-        self.player.draw(self.screen)
-        self.ai_player.draw(self.screen)
-        self.ball.draw(self.screen)
+        self.top_player.draw(self.screen)
+        self.bottom_player.draw(self.screen)
+       
         self.net.draw(self.screen)
         self.draw_scores()
-
+        self.ball.draw(self.screen)
         if not self.ball.served and self.local_player.serving:
             self.power_bar.draw(self.screen)
 
@@ -235,8 +251,10 @@ class Game:
 
 def game_loop(game_state):
     pygame.init()
-    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.RESIZABLE)
 
+
+    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.RESIZABLE)
+    sprite_sheet = pygame.image.load('sprites.png').convert_alpha()
     ball_radius = 5
     ball_x = WINDOW_WIDTH // 2
     ball_y = WINDOW_HEIGHT // 2
@@ -245,7 +263,9 @@ def game_loop(game_state):
     ball_speed_y = 4
     ball_speed_z = 0
 
-    game = Game(screen, ball_x ,ball_y, ball_z, ball_radius)
+
+
+    game = Game(screen,sprite_sheet, ball_x ,ball_y, ball_z, ball_radius)
     menu = Menu(game.screen)
 
     if game_state == "MULTIPLAYER":

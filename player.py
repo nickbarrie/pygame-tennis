@@ -1,9 +1,22 @@
 import pygame
-from settings import WHITE, RED, WINDOW_HEIGHT, WINDOW_WIDTH
+import pygame.sprite
+from settings import WHITE, RED, WINDOW_HEIGHT, WINDOW_WIDTH, SCALE_FACTOR
 import random as Random
 
-class Player:
-    def __init__(self, x, y, speed, side):
+class Player(pygame.sprite.Sprite):
+    def __init__(self, sprite_sheet, x, y, speed, side):
+        super().__init__() 
+        self.width = 16
+        self.height = 16
+        self.image = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+
+        if sprite_sheet is not None:
+            if side == 1:
+                self.image.blit(sprite_sheet, (0, 0), (0, 0, self.width, self.height))
+            else:
+                self.image.blit(sprite_sheet, (0, 0), (16, 0, self.width, self.height))
+        self.rect = self.image.get_rect()  # Create a rect from the image size
+        self.rect.topleft = (x, y)  # Set initial position
         self.x = x
         self.y = y
         self.speed = speed
@@ -19,16 +32,25 @@ class Player:
         self.side = side # 1 for top -1 for bottom
         self.score = 0
         self.serving = False
+    
 
     def move(self, keys):
+        
+
         if keys[pygame.K_w]:  # Move up
             self.y -= self.speed
+            self.rect.y -= self.speed
         if keys[pygame.K_s]:  # Move down
             self.y += self.speed
+            self.rect.y += self.speed
         if keys[pygame.K_a]:  # Move left
             self.x -= self.speed
+            self.rect.x -= self.speed
         if keys[pygame.K_d]:  # Move right
             self.x += self.speed
+            self.rect.x += self.speed
+
+
 
     def start_swing(self):
         self.swinging = True
@@ -39,7 +61,9 @@ class Player:
             self.swinging = False
 
     def draw(self,screen):
-        pygame.draw.rect(screen, WHITE, (self.x, self.y, self.width, self.height))
+        scaled_image = pygame.transform.scale(self.image, (self.rect.width * SCALE_FACTOR, self.rect.height * SCALE_FACTOR))
+
+        screen.blit(scaled_image, self.rect.topleft)
         if self.swinging:
             self.draw_swing(screen)
 
@@ -53,8 +77,8 @@ class Player:
         return swing_area.colliderect(ball_rect) > 0
     
 class AIPlayer(Player):
-    def __init__(self, x, y, speed, side):
-        super().__init__(x, y, speed, side)
+    def __init__(self,sprite_sheet, x, y, speed, side):
+        super().__init__(sprite_sheet, x, y, speed, side)
 
     def update_ai(self, ball):
 

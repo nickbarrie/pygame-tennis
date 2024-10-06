@@ -12,13 +12,13 @@ import random
 
 class GameServer:
     def __init__(self):
-        self.player_1 = Player(100, 50, speed=4, side=1)  # Top player
-        self.player_2 = Player(100, 550, speed=4, side=-1)  # Bottom player
-        self.net = Net(WINDOW_WIDTH // 2, 10)  # Net in the middle
-        self.ball = Ball(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2, 0, radius=10)  # Ball in the center
+        self.player_1 = Player(None, 100, 50, speed=4, side=1)  # Top player
+        self.player_2 = Player(None, 100, 550, speed=4, side=-1)  # Bottom player
+        self.net = Net(None, WINDOW_WIDTH // 2, 10)  # Net in the middle
+        self.ball = Ball(None, WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2, 0, radius=10)  # Ball in the center
         self.clients = []  # Keep track of connected clients
         self.game_state = {
-            "ball": {"x": self.ball.x, "y": self.ball.y, "z": self.ball.z, "speed_x": self.ball.speed_x, "speed_y": self.ball.speed_y, "served": self.ball.served},
+            "ball": {"x": self.ball.x, "y": self.ball.y, "z": self.ball.z, "speed_x": self.ball.speed_x, "speed_y": self.ball.speed_y, "served": self.ball.served, "angle": self.ball.angle},
             "players": [
                 {"x": self.player_1.x, "y": self.player_1.y, "score": 0, "swinging": False, "serving": False},
                 {"x": self.player_2.x, "y": self.player_2.y, "score": 0, "swinging": False, "serving": False}
@@ -112,14 +112,11 @@ class GameServer:
 
         # Move the ball and check for collisions with the net if the ball is served
         if self.ball.served:
+            print("Ball is served")
             self.ball.move()
             self.check_ball_in_play()
 
-        print("can be hit", self.ball.can_be_hit())
-        print("player 1 swing area", self.player_1.is_ball_in_swing_area(self.ball))
-        print("player 2 swing area", self.player_2.is_ball_in_swing_area(self.ball))
-        print("player 1 swinging", self.game_state['players'][0]['swinging'])
-        print("player 2 swinging", self.game_state['players'][1]['swinging'])
+#
         
         # Player 1 Swinging Logic
         if self.player_1.is_ball_in_swing_area(self.ball) and self.ball.can_be_hit() and self.game_state['players'][0]['swinging']:
@@ -144,7 +141,8 @@ class GameServer:
             'z': self.ball.z,
             'speed_x': self.ball.speed_x,
             'speed_y': self.ball.speed_y,
-            'served': self.ball.served
+            'served': self.ball.served,
+            'angle': self.ball.angle
         }
 
         self.game_state['players'][0]['score'] = self.player_1.score
@@ -213,7 +211,7 @@ class GameServer:
 def start_server():
 
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind(('localhost', 5555))  # Bind to localhost on port 5555
+    server.bind(('172.20.0.84', 5555))  # Bind to localhost on port 5555
     server.listen(2)  # We only need 2 connections for local multiplayer
     game_server = GameServer()
 
