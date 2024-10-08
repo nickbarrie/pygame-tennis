@@ -54,8 +54,13 @@ class Ball(pygame.sprite.Sprite):
             self.speed_y = speed_y
             self.speed_z = speed_z
             self.served = True
+            self.in_play = True
             self.bounce_count = 0
 
+    
+    def is_at_rest(self):
+        # Check if the ball's speed and height indicate it's at rest
+        return self.speed_z == 0 and self.z == 0 and self.speed_x == 0 and self.speed_y == 0
 
     def apply_friction(self):
         drag_coefficient = 0.995  # Simulate friction or air resistance
@@ -71,6 +76,8 @@ class Ball(pygame.sprite.Sprite):
             self.speed_x = 0
         if abs(self.speed_y) < cutoff_speed:
             self.speed_y = 0
+        if abs(self.speed_z) < cutoff_speed:
+            self.speed_z = 0
 
     
     def apply_gravity(self):

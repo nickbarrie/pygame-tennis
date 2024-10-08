@@ -8,6 +8,7 @@ from net import Net
 from random import Random
 import sys
 import random
+import pygame
 
 
 class GameServer:
@@ -17,6 +18,8 @@ class GameServer:
         self.net = Net(None, WINDOW_WIDTH // 2, 10)  # Net in the middle
         self.ball = Ball(None, WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2, 0, radius=10)  # Ball in the center
         self.clients = []  # Keep track of connected clients
+        self.point_settled_time = None  # Time when the last point was settled
+        self.point_delay_duration = 2000  
         self.game_state = {
             "ball": {"x": self.ball.x, "y": self.ball.y, "z": self.ball.z, "speed_x": self.ball.speed_x, "speed_y": self.ball.speed_y, "served": self.ball.served, "angle": self.ball.angle},
             "players": [
@@ -27,68 +30,76 @@ class GameServer:
 
     def determine_server(self):
         """ Switch server when the ball is not in play """
-        if not self.ball.in_play:
-            self.ball.in_play = True
+        if not self.ball.served :
+            print("Determining server...")
             self.player_1.serving = not self.player_1.serving
             self.player_2.serving = not self.player_2.serving
 
 
-            if not self.player_1.serving and not self.player_2.serving:
-                current_server = random.choice([1, 2])
-                if current_server == 1:
-                    self.player_1.serving = True
-                    self.player_2.serving = False
-                else:
-                    self.player_1.serving = False
-                    self.player_2.serving = True
+        if not self.player_1.serving and not self.player_2.serving:
+            current_server = random.choice([1, 2])
+            if current_server == 1:
+                self.player_1.serving = True
+                self.player_2.serving = False
+            else:
+                self.player_1.serving = False
+                self.player_2.serving = True
 
-            self.game_state['players'][0]['serving'] = self.player_1.serving
-            self.game_state['players'][1]['serving'] = self.player_2.serving
+        print("Player 1 serving: %s, Player 2 serving: %s" % (self.player_1.serving, self.player_2.serving))
+        self.game_state['players'][0]['serving'] = self.player_1.serving
+        self.game_state['players'][1]['serving'] = self.player_2.serving
+
+
 
     def check_ball_in_play(self):
         """ Check if the ball is still in play"""
             # Out of bounds horizontally (left or right)
         if self.ball.x < 0 or self.ball.x > WINDOW_WIDTH:
             print("Ball out of bounds horizontally")
+            self.ball.in_play = False
+            self.ball.served = False
             if self.ball.speed_y < 0:  # Ball was moving towards player 2's side
                 self.handle_point_scored(self.player_1)
             else:  # Ball was moving towards player 1's side
                 self.handle_point_scored(self.player_2)
-            self.ball.reset_ball()
+            self.point_settled_time = pygame.time.get_ticks()
 
         # Out of bounds vertically (top or bottom)
         elif self.ball.y < 0 or self.ball.y > WINDOW_HEIGHT:
             
             print("Ball out of bounds vertically")
+            self.ball.in_play = False
+            self.ball.served = False
             if self.ball.speed_y < 0:  # Ball hit out on player 1's side
                 self.handle_point_scored(self.player_2)
             else:  # Ball hit out on player 2's side
                 self.handle_point_scored(self.player_1)
-            self.ball.reset_ball()
+            self.point_settled_time = pygame.time.get_ticks()
         
         # Net collision
         elif self.ball.check_net_collision(self.net):  # Ball hit the net and did not cross it
             
             print("Ball hit the net")
+            self.ball.in_play = False
+            self.ball.served = False
             if self.ball.speed_y > 0:  # ball bounces backwards to player 2's side
                 self.handle_point_scored(self.player_1)
             else:  # Ball was moving towards player 1's side
                 self.handle_point_scored(self.player_2)
-            self.ball.reset_ball()
+            self.point_settled_time = pygame.time.get_ticks()
 
         # Check for multiple bounces
         elif self.ball.bounce_count > 1:  # If ball bounces more than once
-            
             print("Ball bounced more than once")
+            self.ball.in_play = False
+            self.ball.served = False
             if self.ball.speed_y < 0:   # Player 1 hit the ball last, so Player 1 wins the point
                 self.handle_point_scored(self.player_1)
             else:  # Player 2 hit the ball last, so Player 1 wins the point
                 self.handle_point_scored(self.player_2)
-            self.ball.reset_ball()
+            self.point_settled_time = pygame.time.get_ticks()
         
-        # Ball is still in play
-        else:
-            self.ball.in_play = True
+    
 
     def handle_point_scored(self, player):
         """ Handle when a point is scored and decide the next server """
@@ -97,9 +108,15 @@ class GameServer:
 
     def update_game_state(self):
         """ Update the game state on the server """
+        if self.point_settled_time:
+            if self.ball.is_at_rest():
+                current_time = pygame.time.get_ticks()
+                if current_time - self.point_settled_time >= self.point_delay_duration:
+                    # Reset the ball after the delay
+                    self.ball.reset_ball()
+                    self.point_settled_time = None  # Reset the delay timer
+                return  # Skip the rest of the update logic during the delay
 
-
-        self.determine_server()
 
         if self.player_1.serving:
             self.player_2.serving = False
@@ -109,11 +126,11 @@ class GameServer:
             self.player_1.serving = False
             self.game_state['players'][0]['serving'] = False
 
+        if self.ball.served:
+            self.ball.move()
 
         # Move the ball and check for collisions with the net if the ball is served
-        if self.ball.served:
-            print("Ball is served")
-            self.ball.move()
+        if self.ball.in_play:
             self.check_ball_in_play()
 
 #
@@ -162,7 +179,6 @@ class GameServer:
         if data.get('swinging') and not player.swinging:
             player.start_swing()
         player.update_swing()
-
 
 
         self.game_state['players'][player_id]['x'] = player.x
@@ -214,6 +230,7 @@ def start_server():
     server.bind(('172.20.0.84', 5555))  # Bind to localhost on port 5555
     server.listen(2)  # We only need 2 connections for local multiplayer
     game_server = GameServer()
+    game_server.determine_server()
 
     print("Server started! Waiting for connections...")
     try:

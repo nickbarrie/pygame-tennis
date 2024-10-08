@@ -35,7 +35,7 @@ class Player(pygame.sprite.Sprite):
     
 
     def move(self, keys):
-        
+
 
         if keys[pygame.K_w]:  # Move up
             self.y -= self.speed
@@ -61,9 +61,11 @@ class Player(pygame.sprite.Sprite):
             self.swinging = False
 
     def draw(self,screen):
+        print(self.rect.x, self.rect.y)
         scaled_image = pygame.transform.scale(self.image, (self.rect.width * SCALE_FACTOR, self.rect.height * SCALE_FACTOR))
 
-        screen.blit(scaled_image, self.rect.topleft)
+
+        screen.blit(scaled_image, (self.x, self.y))
         if self.swinging:
             self.draw_swing(screen)
 

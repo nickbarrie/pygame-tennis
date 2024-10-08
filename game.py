@@ -98,9 +98,10 @@ class Game:
         if self.player_id == 0:
             self.local_player = self.top_player  # Player 1
             self.remote_player = self.bottom_player  # Player 2 (opponent)
+
         else:
-            self.local_player = self.bottom_player  # Player 2
-            self.remote_player = self.top_player  # Player 1 (opponent)
+            self.local_player = self.bottom_player  # Player 1
+            self.remote_player = self.top_player  # Player 2 (opponent)
 
     def load_single_player(self):
         """ Load single player game state """
@@ -145,13 +146,14 @@ class Game:
 
         if game_state:
             # Update the remote player's position and swing state from the game state
+            print("opponent x and y",game_state['players'][1]['x'],game_state['players'][1]['y'])
             opponent_id = 1 if self.player_id == 0 else 0
             self.remote_player.x = game_state['players'][opponent_id]['x']
             self.remote_player.y = game_state['players'][opponent_id]['y']
             self.remote_player.swinging = game_state['players'][opponent_id]['swinging']
             self.remote_player.score = game_state['players'][opponent_id]['score']
             self.remote_player.serving = game_state['players'][opponent_id]['serving']
-            
+            print("remote player x and y",self.remote_player.x,self.remote_player.y)
             # Update local player score
             self.local_player.score = game_state['players'][self.player_id]['score']
             self.local_player.serving = game_state['players'][self.player_id]['serving']
@@ -163,7 +165,7 @@ class Game:
             self.ball.served = game_state['ball']['served']
             self.ball.angle = game_state['ball']['angle']
 
-            self.check_point()
+            
 
     def handle_game_events(self):
         keys = pygame.key.get_pressed()
