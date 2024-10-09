@@ -61,7 +61,6 @@ class Player(pygame.sprite.Sprite):
             self.swinging = False
 
     def draw(self,screen):
-        print(self.rect.x, self.rect.y)
         scaled_image = pygame.transform.scale(self.image, (self.rect.width * SCALE_FACTOR, self.rect.height * SCALE_FACTOR))
 
 

@@ -5,7 +5,6 @@ from settings import WINDOW_WIDTH, WINDOW_HEIGHT
 from player import Player
 from ball import Ball
 from net import Net
-from random import Random
 import sys
 import random
 import pygame
@@ -15,7 +14,7 @@ class GameServer:
     def __init__(self):
         self.player_1 = Player(None, 100, 50, speed=4, side=1)  # Top player
         self.player_2 = Player(None, 100, 550, speed=4, side=-1)  # Bottom player
-        self.net = Net(None, WINDOW_WIDTH // 2, 10)  # Net in the middle
+        self.net = Net(None, WINDOW_WIDTH // 2, 8)  # Net in the middle
         self.ball = Ball(None, WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2, 0, radius=10)  # Ball in the center
         self.clients = []  # Keep track of connected clients
         self.point_settled_time = None  # Time when the last point was settled
@@ -57,7 +56,6 @@ class GameServer:
         if self.ball.x < 0 or self.ball.x > WINDOW_WIDTH:
             print("Ball out of bounds horizontally")
             self.ball.in_play = False
-            self.ball.served = False
             if self.ball.speed_y < 0:  # Ball was moving towards player 2's side
                 self.handle_point_scored(self.player_1)
             else:  # Ball was moving towards player 1's side
@@ -69,7 +67,6 @@ class GameServer:
             
             print("Ball out of bounds vertically")
             self.ball.in_play = False
-            self.ball.served = False
             if self.ball.speed_y < 0:  # Ball hit out on player 1's side
                 self.handle_point_scored(self.player_2)
             else:  # Ball hit out on player 2's side
@@ -81,7 +78,6 @@ class GameServer:
             
             print("Ball hit the net")
             self.ball.in_play = False
-            self.ball.served = False
             if self.ball.speed_y > 0:  # ball bounces backwards to player 2's side
                 self.handle_point_scored(self.player_1)
             else:  # Ball was moving towards player 1's side
@@ -92,7 +88,6 @@ class GameServer:
         elif self.ball.bounce_count > 1:  # If ball bounces more than once
             print("Ball bounced more than once")
             self.ball.in_play = False
-            self.ball.served = False
             if self.ball.speed_y < 0:   # Player 1 hit the ball last, so Player 1 wins the point
                 self.handle_point_scored(self.player_1)
             else:  # Player 2 hit the ball last, so Player 1 wins the point
@@ -104,9 +99,10 @@ class GameServer:
     def handle_point_scored(self, player):
         """ Handle when a point is scored and decide the next server """
         player.score += 1  # Increment player score
-        self.determine_server()
+     
 
     def update_game_state(self):
+        print("Updating game state")
         """ Update the game state on the server """
         if self.point_settled_time:
             if self.ball.is_at_rest():
@@ -115,6 +111,9 @@ class GameServer:
                     # Reset the ball after the delay
                     self.ball.reset_ball()
                     self.point_settled_time = None  # Reset the delay timer
+                    self.determine_server()
+                for client in self.clients:
+                    client.send(pickle.dumps(self.game_state))
                 return  # Skip the rest of the update logic during the delay
 
 
@@ -139,7 +138,7 @@ class GameServer:
         if self.player_1.is_ball_in_swing_area(self.ball) and self.ball.can_be_hit() and self.game_state['players'][0]['swinging']:
             print("Player 1 hit the ball")
             self.ball.speed_y = self.player_1.swing_speed_y * self.player_1.side
-            self.ball.speed_x = self.player_1.swing_speed_x * Random.choice([-1, 1])
+            self.ball.speed_x = self.player_1.swing_speed_x * random.choice([-1, 1])
             self.ball.speed_z = self.player_1.swing_speed_z
             self.ball.register_hit()
 
@@ -147,7 +146,7 @@ class GameServer:
         if self.player_2.is_ball_in_swing_area(self.ball) and self.ball.can_be_hit() and self.game_state['players'][1]['swinging']:
             print("Player 2 hit the ball")
             self.ball.speed_y = self.player_2.swing_speed_y * self.player_2.side
-            self.ball.speed_x = self.player_2.swing_speed_x * Random.choice([-1, 1])
+            self.ball.speed_x = self.player_2.swing_speed_x * random.choice([-1, 1])
             self.ball.speed_z = self.player_2.swing_speed_z
             self.ball.register_hit()
 
@@ -188,6 +187,7 @@ class GameServer:
         if  self.game_state['players'][player_id]['serving']:
             self.ball.x = player.x
             self.ball.y = player.y
+            self.ball.z = 0
 
         if data.get('swinging'):
 
@@ -195,6 +195,7 @@ class GameServer:
                 print("Ball served with speed x: %d, y: %d, z: %d" % (data['speed_x'], data['speed_y'], data['speed_z']))
                 self.ball.serve(data['speed_x'], data['speed_y'], data['speed_z'], player.x, player.y)
                 self.game_state['players'][player_id]['serving'] = False
+                self.ball.register_hit()
 
    
                 
@@ -231,6 +232,7 @@ def start_server():
     server.listen(2)  # We only need 2 connections for local multiplayer
     game_server = GameServer()
     game_server.determine_server()
+    pygame.init()
 
     print("Server started! Waiting for connections...")
     try:

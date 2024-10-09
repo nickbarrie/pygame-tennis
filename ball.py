@@ -40,7 +40,6 @@ class Ball(pygame.sprite.Sprite):
                 self.speed_x *= -0.2  # Reverse speed with some energy loss
                 self.speed_y *= -0.2
                 self.speed_z *= -0.2  # Simulate a bounce upward if needed
-                self.z = net.height + 1
                 return True
         return False
 
@@ -76,23 +75,28 @@ class Ball(pygame.sprite.Sprite):
             self.speed_x = 0
         if abs(self.speed_y) < cutoff_speed:
             self.speed_y = 0
-        if abs(self.speed_z) < cutoff_speed:
+        if abs(self.speed_z) < cutoff_speed and self.z <= 0.02:
             self.speed_z = 0
+            self.z = 0
 
     
     def apply_gravity(self):
-        self.speed_z = self.speed_z -0.03
+        if self.z > 0:
+            self.speed_z -= 0.03
+
 
     def apply_bounce(self):
-        if self.z <= 0:  
+        if self.z < 0:  
             self.speed_z *= -0.8
             self.bounce_count += 1 
 
     def apply_spin(self):
+        ball_velocity = (self.speed_x ** 2 + self.speed_y ** 2) ** 0.5
+
         if self.speed_y > 0:
-            self.angle -= 5  # Spin clockwise when moving down
+            self.angle -= 1 * ball_velocity   # Spin clockwise when moving down
         else:
-            self.angle += 5  # Spin counter-clockwise when moving up
+            self.angle += 1 * ball_velocity # Spin counter-clockwise when moving up
 
         self.angle %= 360
 
@@ -102,11 +106,12 @@ class Ball(pygame.sprite.Sprite):
         self.z += self.speed_z
 
         self.rect.center = (self.x, self.y)
-
+        
         self.apply_bounce()
         self.apply_friction()
         self.apply_gravity()
         self.apply_spin()
+
             
 
     def scale_radius(self, min_z, max_z, min_radius, max_radius):
@@ -116,9 +121,9 @@ class Ball(pygame.sprite.Sprite):
     def draw(self,screen):
         
         min_z = 0
-        max_z = 100
+        max_z = 10
         min_radius = 10
-        max_radius = 30
+        max_radius = 20
         scaled_radius = self.scale_radius(min_z, max_z, min_radius, max_radius)
 
 
@@ -128,9 +133,11 @@ class Ball(pygame.sprite.Sprite):
 
 
             # Draw the shadow
-        shadow_width = int(scaled_radius * (2 - self.z / max_z))  # Shadow gets smaller as the ball goes higher
-        shadow_height = int(scaled_radius * .7 * (1.2 - self.z / max_z))  # Shadow height also reduces
-        shadow_color = (0, 0, 0, int(150 * (1 - self.z / max_z)))  # Shadow gets more transparent as the ball rises
+        shadow_width = max(1, int(scaled_radius * (2 - self.z / max_z)))  
+        shadow_height = max(1, int(scaled_radius * .7 * (1.2 - self.z / max_z)))
+
+        shadow_color = (0, 0, 0, max(0, min(255, int(150 * (1 - self.z / max_z)))))
+
         
         # Create a surface for the shadow with alpha transparency
         shadow_surface = pygame.Surface((shadow_width, shadow_height), pygame.SRCALPHA)
@@ -156,6 +163,7 @@ class Ball(pygame.sprite.Sprite):
     def reset_ball(self):
         self.x = WINDOW_WIDTH // 2
         self.y = WINDOW_HEIGHT // 2
+        self.z = 0
         self.speed_x = 0
         self.speed_y = 0
         self.speed_z = 0
