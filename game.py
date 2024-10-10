@@ -64,12 +64,12 @@ class Game:
     
     def draw_scores(self):
         # Render the text for both player and AI scores
-        player_text = self.font.render(f"Player: {self.top_player.score}", True, WHITE)
-        ai_text = self.font.render(f"AI: {self.bottom_player.score}", True, WHITE)
+        player_text = self.font.render(f"Top: {self.top_player.score}", True, WHITE)
+        ai_text = self.font.render(f"Bottom: {self.bottom_player.score}", True, WHITE)
 
         # Display the scores in the top left and right corners
         self.screen.blit(player_text, (50, 20))
-        self.screen.blit(ai_text, (WINDOW_WIDTH - 150, 20))
+        self.screen.blit(ai_text, (WINDOW_WIDTH - 60 * SCALE_FACTOR, 20))
 
     def check_point(self):
         if self.ball.y < 0:
@@ -163,8 +163,6 @@ class Game:
             self.ball.z = game_state['ball']['z']
             self.ball.served = game_state['ball']['served']
             self.ball.angle = game_state['ball']['angle']
-
-            print(game_state    )
 
     def handle_game_events(self):
         keys = pygame.key.get_pressed()
@@ -267,7 +265,7 @@ def game_loop(game_state):
 
 
     game = Game(screen,sprite_sheet, ball_x ,ball_y, ball_z, ball_radius)
-    menu = Menu(game.screen)
+    menu = Menu(game.screen, sprite_sheet)
 
     if game_state == "MULTIPLAYER":
         game.connect_to_server()  # Add this line

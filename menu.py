@@ -1,20 +1,44 @@
 import pygame
-from settings import WINDOW_WIDTH, WINDOW_HEIGHT, WHITE
+from settings import WINDOW_WIDTH, WINDOW_HEIGHT, GREEN, SPRITE_SIZE, SCALE_FACTOR
 
 class Menu:
-    def __init__(self, screen):
+    def __init__(self, screen, sprite_sheet):
         self.screen = screen
+        self.sprite_sheet = sprite_sheet
         self.font = pygame.font.Font('silkscreen.ttf', 32)  # Load font
+        self.plaqueImage = pygame.Surface((SPRITE_SIZE, SPRITE_SIZE), pygame.SRCALPHA)
+        self.plaqueEndImage = pygame.Surface((SPRITE_SIZE, SPRITE_SIZE), pygame.SRCALPHA)
+        if self.sprite_sheet is not None:
+                self.plaqueImage.blit(self.sprite_sheet, (0, 0), (7 * SPRITE_SIZE, 0, SPRITE_SIZE, SPRITE_SIZE))
+                self.plaqueEndImage.blit(self.sprite_sheet, (0, 0), (6 * SPRITE_SIZE, 0, SPRITE_SIZE, SPRITE_SIZE))
 
     def draw(self):
-        self.screen.fill((0, 0, 0))  # Fill background with black
+        # Fill background with green
+        self.screen.fill(GREEN)
+        
+        
+
+        scaled_plaque = pygame.transform.scale(self.plaqueImage, ( SPRITE_SIZE * SCALE_FACTOR, SPRITE_SIZE * SCALE_FACTOR))
+        scaled_plaque_end = pygame.transform.scale(self.plaqueEndImage, ( SPRITE_SIZE * SCALE_FACTOR, SPRITE_SIZE * SCALE_FACTOR))
+
+        scaled_plaque_end_flipped = pygame.transform.flip(scaled_plaque_end, True, False)
+
+
+        
 
         # Draw title
         title_text = self.font.render("Tennis Game", True, (255, 255, 255))
+        self.screen.blit(scaled_plaque_end, (WINDOW_WIDTH // 2 - title_text.get_width() // 2 - scaled_plaque.get_width(), 85))
+        i = 0
+        for i in range(0, title_text.get_width() // scaled_plaque.get_width() + 1):
+            print(i)
+            self.screen.blit(scaled_plaque, (WINDOW_WIDTH // 2 - title_text.get_width() // 2 + i * scaled_plaque.get_width() , 85))
+
+        self.screen.blit(scaled_plaque_end_flipped, (WINDOW_WIDTH // 2 + title_text.get_width() // 2, 85))
         self.screen.blit(title_text, (WINDOW_WIDTH // 2 - title_text.get_width() // 2, 100))
 
         # Draw "Start Game" button
-        start_text = self.font.render("Start Game", True, (255, 255, 255))
+        start_text = self.font.render("Singleplayer", True, (255, 255, 255))
         self.screen.blit(start_text, (WINDOW_WIDTH // 2 - start_text.get_width() // 2, 300))
 
         # Draw "Instructions" button

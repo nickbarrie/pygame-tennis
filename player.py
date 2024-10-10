@@ -1,6 +1,6 @@
 import pygame
 import pygame.sprite
-from settings import WHITE, RED, WINDOW_HEIGHT, WINDOW_WIDTH, SCALE_FACTOR
+from settings import WHITE, RED, WINDOW_HEIGHT, WINDOW_WIDTH, SCALE_FACTOR, SPRITE_SIZE
 import random as Random
 
 class Player(pygame.sprite.Sprite):
@@ -9,8 +9,10 @@ class Player(pygame.sprite.Sprite):
         self.width = 16
         self.height = 16
         self.image = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        self.racket = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
 
         if sprite_sheet is not None:
+            self.racket.blit(sprite_sheet, (0, 0), (8 * SPRITE_SIZE, 0, self.width, self.height))
             if side == 1:
                 self.image.blit(sprite_sheet, (0, 0), (0, 0, self.width, self.height))
             else:
@@ -66,11 +68,11 @@ class Player(pygame.sprite.Sprite):
 
         screen.blit(scaled_image, (self.x, self.y))
         if self.swinging:
-            self.draw_swing(screen)
+            self.draw_swing(screen, scaled_image.get_width())
 
-    def draw_swing(self,screen):
-        swing_area = pygame.Rect(self.x + self.width, self.y, 20, 10)
-        pygame.draw.rect(screen, RED, swing_area)  
+    def draw_swing(self,screen, image_width):
+        scaled_racket = pygame.transform.scale(self.racket, (self.rect.width * SCALE_FACTOR, self.rect.height * SCALE_FACTOR))
+        screen.blit(scaled_racket, (self.x + image_width, self.y))
     
     def is_ball_in_swing_area(self, ball):
         swing_area = pygame.Rect(self.x + self.width, self.y, 400, 200)

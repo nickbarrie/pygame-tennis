@@ -1,5 +1,5 @@
 import pygame
-from settings import WINDOW_WIDTH, WINDOW_HEIGHT, WHITE, SCALE_FACTOR, SPRITE_WIDTH, GRAY
+from settings import WINDOW_WIDTH, WINDOW_HEIGHT, WHITE, SCALE_FACTOR, SPRITE_SIZE, GRAY
 
 
 class Ball(pygame.sprite.Sprite):
@@ -23,8 +23,8 @@ class Ball(pygame.sprite.Sprite):
         self.angle = 0
        
         if sprite_sheet is not None:
-            self.image = pygame.Surface((SPRITE_WIDTH, SPRITE_WIDTH), pygame.SRCALPHA)
-            self.image.blit(sprite_sheet, (0, 0), (5 * SPRITE_WIDTH, 0, SPRITE_WIDTH, SPRITE_WIDTH))
+            self.image = pygame.Surface((SPRITE_SIZE, SPRITE_SIZE), pygame.SRCALPHA)
+            self.image.blit(sprite_sheet, (0, 0), (5 * SPRITE_SIZE, 0, SPRITE_SIZE, SPRITE_SIZE))
 
             self.rect = self.image.get_rect()  # Create a rect from the image size
             self.rect.center = (x, y)  # Set initial position
@@ -121,7 +121,7 @@ class Ball(pygame.sprite.Sprite):
     def draw(self,screen):
         
         min_z = 0
-        max_z = 10
+        max_z = 20
         min_radius = 10
         max_radius = 20
         scaled_radius = self.scale_radius(min_z, max_z, min_radius, max_radius)

@@ -102,7 +102,6 @@ class GameServer:
      
 
     def update_game_state(self):
-        print("Updating game state")
         """ Update the game state on the server """
         if self.point_settled_time:
             if self.ball.is_at_rest():
