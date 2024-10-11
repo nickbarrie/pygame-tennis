@@ -33,7 +33,9 @@ class Player(pygame.sprite.Sprite):
         self.serve_speed_multiplier = 2
         self.side = side # 1 for top -1 for bottom
         self.score = 0
+        self.sets = 0
         self.serving = False
+        self.advantage = False
     
 
     def move(self, keys):

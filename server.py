@@ -22,8 +22,8 @@ class GameServer:
         self.game_state = {
             "ball": {"x": self.ball.x, "y": self.ball.y, "z": self.ball.z, "speed_x": self.ball.speed_x, "speed_y": self.ball.speed_y, "served": self.ball.served, "angle": self.ball.angle},
             "players": [
-                {"x": self.player_1.x, "y": self.player_1.y, "score": 0, "swinging": False, "serving": False},
-                {"x": self.player_2.x, "y": self.player_2.y, "score": 0, "swinging": False, "serving": False}
+                {"x": self.player_1.x, "y": self.player_1.y, "score": 0, "sets" : 0, "swinging": False, "serving": False},
+                {"x": self.player_2.x, "y": self.player_2.y, "score": 0, "sets" : 0, "swinging": False, "serving": False}
             ]
         }
 
@@ -57,9 +57,9 @@ class GameServer:
             print("Ball out of bounds horizontally")
             self.ball.in_play = False
             if self.ball.speed_y < 0:  # Ball was moving towards player 2's side
-                self.handle_point_scored(self.player_1)
+                self.handle_point_scored(self.player_1,self.player_2)
             else:  # Ball was moving towards player 1's side
-                self.handle_point_scored(self.player_2)
+                self.handle_point_scored(self.player_2, self.player_1)
             self.point_settled_time = pygame.time.get_ticks()
 
         # Out of bounds vertically (top or bottom)
@@ -68,9 +68,9 @@ class GameServer:
             print("Ball out of bounds vertically")
             self.ball.in_play = False
             if self.ball.speed_y < 0:  # Ball hit out on player 1's side
-                self.handle_point_scored(self.player_2)
+                self.handle_point_scored(self.player_2, self.player_1)
             else:  # Ball hit out on player 2's side
-                self.handle_point_scored(self.player_1)
+                self.handle_point_scored(self.player_1,self.player_2)
             self.point_settled_time = pygame.time.get_ticks()
         
         # Net collision
@@ -79,9 +79,9 @@ class GameServer:
             print("Ball hit the net")
             self.ball.in_play = False
             if self.ball.speed_y > 0:  # ball bounces backwards to player 2's side
-                self.handle_point_scored(self.player_1)
+                self.handle_point_scored(self.player_1,self.player_2)
             else:  # Ball was moving towards player 1's side
-                self.handle_point_scored(self.player_2)
+                self.handle_point_scored(self.player_2, self.player_1)
             self.point_settled_time = pygame.time.get_ticks()
 
         # Check for multiple bounces
@@ -89,17 +89,67 @@ class GameServer:
             print("Ball bounced more than once")
             self.ball.in_play = False
             if self.ball.speed_y < 0:   # Player 1 hit the ball last, so Player 1 wins the point
-                self.handle_point_scored(self.player_1)
+                self.handle_point_scored(self.player_1,self.player_2)
             else:  # Player 2 hit the ball last, so Player 1 wins the point
-                self.handle_point_scored(self.player_2)
+                self.handle_point_scored(self.player_2, self.player_1)
             self.point_settled_time = pygame.time.get_ticks()
         
-    
+    def handle_set_scored(self, playerThatWonSet, playerThatLostSet):
+        """Handle when a set is scored and manage tennis scoring rules"""
 
-    def handle_point_scored(self, player):
-        """ Handle when a point is scored and decide the next server """
-        player.score += 1  # Increment player score
-     
+        if playerThatWonSet.sets == 6 and playerThatLostSet.sets < 5:
+            print(f"Player {playerThatWonSet.side} wins the match")
+        elif (playerThatWonSet.sets == 6 and playerThatLostSet.sets == 5) or (playerThatWonSet.sets == 7 and playerThatLostSet.sets <= 5):
+            print(f"Player {playerThatWonSet.side} wins the set")
+        elif playerThatWonSet.sets == 6 and playerThatLostSet.sets == 6:
+            print(f"Player {playerThatWonSet.side} wins the tiebreak")
+        else:
+            playerThatWonSet.sets += 1
+            return  # Exit without resetting sets if the set is not yet won
+
+        # Reset sets after a set or match win
+        playerThatWonSet.sets = 0
+        playerThatLostSet.sets = 0
+
+    def handle_point_scored(self, playerThatWonPoint, playerThatLostPoint):
+        """Handle when a point is scored and manage tennis scoring rules"""
+
+        # Check if the game is in deuce
+        if playerThatWonPoint.score == 3 and playerThatLostPoint.score == 3:
+            if playerThatWonPoint.advantage:
+                print(f"Player {playerThatWonPoint.side} wins the game")
+                playerThatWonPoint.score = 0
+                playerThatLostPoint.score = 0
+                playerThatWonPoint.advantage = False  # Reset advantage after winning
+                self.determine_server()  # Decide the next server
+                return
+            elif playerThatLostPoint.advantage:
+                print(f"Back to deuce!")
+                playerThatLostPoint.advantage = False  # Remove advantage from opponent
+                return
+            else:
+                print(f"Deuce! Player {playerThatWonPoint.side} gains advantage.")
+                playerThatWonPoint.advantage = True
+                return
+
+        # Normal point progression until 40
+        if playerThatWonPoint.score < 3:  # Points below 40
+            playerThatWonPoint.score += 1
+        elif playerThatWonPoint.score == 3:  # If the player scores and already has 40
+            if playerThatLostPoint.score < 3:  # Player wins the game if opponent has less than 40
+                print(f"Player {playerThatWonPoint.side} wins the game")
+                playerThatWonPoint.score = 0
+                playerThatLostPoint.score = 0
+                playerThatWonPoint.advantage = False
+                self.handle_set_scored(playerThatWonPoint, playerThatLostPoint)
+                self.determine_server()  # Decide the next server
+                return
+            else:  # If both are at 40, the game goes to deuce
+                print(f"Deuce!")
+                return
+
+
+
 
     def update_game_state(self):
         """ Update the game state on the server """
@@ -162,6 +212,8 @@ class GameServer:
 
         self.game_state['players'][0]['score'] = self.player_1.score
         self.game_state['players'][1]['score'] = self.player_2.score
+        self.game_state['players'][0]['sets'] = self.player_1.sets
+        self.game_state['players'][1]['sets'] = self.player_2.sets
 
         # Send the updated game state to all clients
         for client in self.clients:

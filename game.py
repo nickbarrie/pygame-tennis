@@ -32,7 +32,7 @@ class Game:
         self.net = Net(sprite_sheet, self.net_width, self.net_height)
 
 
-        self.font = pygame.font.Font('silkscreen.ttf', 36)
+        self.font = pygame.font.Font('silkscreen.ttf',50)
         self.screen = screen
 
         self.local_player = None  # Initialize local player
@@ -45,6 +45,7 @@ class Game:
         self.player_id = 0  # Player's ID (0 or 1 for multiplayer)
 
         self.grass_sprite = self.get_sprite(sprite_sheet, 48, 0, 16, 16)
+        self.score_plaque = self.get_sprite(sprite_sheet, 9 * SPRITE_SIZE, 0, 16, 16)
 
     def set_state(self, new_state):
         self.game_state = new_state
@@ -61,15 +62,40 @@ class Game:
         for y in range(0, WINDOW_HEIGHT, 16 * SCALE_FACTOR * 3):  # Step by sprite height
             for x in range(-32, WINDOW_WIDTH, 16 * SCALE_FACTOR * 3):  # Step by sprite width
                 self.screen.blit(scaled_image, (x, y))  # Draw grass at (x, y)
-    
+
+    def convert_score_to_tennis_points(self,score):
+            if score == 0:
+                return 0
+            elif score == 1:
+                return 15
+            elif score == 2:
+                return 30
+            elif score == 3:
+                return 40
+            elif score >= 4:  # Only applies when player wins the game
+                return 50
+            
     def draw_scores(self):
         # Render the text for both player and AI scores
-        player_text = self.font.render(f"Top: {self.top_player.score}", True, WHITE)
-        ai_text = self.font.render(f"Bottom: {self.bottom_player.score}", True, WHITE)
+        score_plaque = pygame.transform.scale(self.score_plaque, ( SPRITE_SIZE* SCALE_FACTOR , SPRITE_SIZE* SCALE_FACTOR ))
+        score_plaque_flipped = pygame.transform.flip(score_plaque, True, False)
+
+        self.screen.blit(score_plaque, (WINDOW_WIDTH - score_plaque.get_width(), 20))
+        self.screen.blit(score_plaque_flipped, (0, 20))
+
+        top_player_score = self.convert_score_to_tennis_points(self.top_player.score)
+        top_score = self.font.render(f"{top_player_score}", True, YELLOW)
+        top_sets = self.font.render(f"Sets: {self.top_player.sets}", True, YELLOW)
+
+        bottom_player_score = self.convert_score_to_tennis_points(self.bottom_player.score)
+        bottom_score = self.font.render(f"{bottom_player_score}", True, YELLOW)
+        bottom_sets = self.font.render(f"Sets: {self.bottom_player.sets}", True, YELLOW)
 
         # Display the scores in the top left and right corners
-        self.screen.blit(player_text, (50, 20))
-        self.screen.blit(ai_text, (WINDOW_WIDTH - 60 * SCALE_FACTOR, 20))
+        self.screen.blit(top_score, (10 * SCALE_FACTOR, 30))
+        self.screen.blit(top_sets, (50, WINDOW_HEIGHT - 40 * SCALE_FACTOR))
+        self.screen.blit(bottom_score, ( WINDOW_WIDTH -20 * SCALE_FACTOR, 30))
+        self.screen.blit(bottom_sets, (50, WINDOW_HEIGHT - 20 * SCALE_FACTOR))
 
     def check_point(self):
         if self.ball.y < 0:
@@ -152,9 +178,11 @@ class Game:
             self.remote_player.y = game_state['players'][opponent_id]['y']
             self.remote_player.swinging = game_state['players'][opponent_id]['swinging']
             self.remote_player.score = game_state['players'][opponent_id]['score']
+            self.remote_player.sets = game_state['players'][opponent_id]['sets']
             self.remote_player.serving = game_state['players'][opponent_id]['serving']
             # Update local player score
             self.local_player.score = game_state['players'][self.player_id]['score']
+            self.local_player.sets = game_state['players'][self.player_id]['sets']
             self.local_player.serving = game_state['players'][self.player_id]['serving']
             
             # Update ball position
