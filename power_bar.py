@@ -21,7 +21,7 @@ class PowerBar:
     def draw(self,screen):
         pygame.draw.rect(screen, WHITE, (self.x, self.y, self.width, self.height))  
         power_height = (self.current_power / self.max_power) * self.height
-        pygame.draw.rect(screen, RED, (self.x, self.y + self.height - power_height, self.width, power_height))
+        pygame.draw.rect(screen, RED, (self.x, self.y + self.height - power_height, self.width, power_height+1))
 
         ideal_start = self.y + self.height * (1 - self.ideal_range[1])
         ideal_end = self.y + self.height * (1 - self.ideal_range[0])

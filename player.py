@@ -64,20 +64,24 @@ class Player(pygame.sprite.Sprite):
         if self.swinging and pygame.time.get_ticks() - self.swing_start_time > self.swing_duration:
             self.swinging = False
 
-    def draw(self,screen):
+    def draw(self,screen, ball):
         scaled_image = pygame.transform.scale(self.image, (self.rect.width * SCALE_FACTOR, self.rect.height * SCALE_FACTOR))
 
 
         screen.blit(scaled_image, (self.x, self.y))
         if self.swinging:
-            self.draw_swing(screen, scaled_image.get_width())
+            self.draw_swing(screen, scaled_image.get_width(), ball)
 
-    def draw_swing(self,screen, image_width):
+    def draw_swing(self,screen, image_width, ball):
         scaled_racket = pygame.transform.scale(self.racket, (self.rect.width * SCALE_FACTOR, self.rect.height * SCALE_FACTOR))
-        screen.blit(scaled_racket, (self.x + image_width, self.y))
+        if (ball.x - self.x) < 0:
+            scaled_racket_flipped = pygame.transform.flip(scaled_racket, True, False)
+            screen.blit(scaled_racket_flipped, (self.x - image_width, self.y))
+        else:  
+            screen.blit(scaled_racket, (self.x + image_width, self.y))
     
     def is_ball_in_swing_area(self, ball):
-        swing_area = pygame.Rect(self.x + self.width, self.y, 400, 200)
+        swing_area = pygame.Rect(self.x - self.width, self.y, self.width * 3, self.height)
         ball_rect = pygame.Rect(ball.x - ball.radius, ball.y - ball.radius, ball.radius * 2, ball.radius * 2)
         return swing_area.colliderect(ball_rect) > 0
     

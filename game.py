@@ -15,7 +15,7 @@ class Game:
 
       
 
-        self.net_width = WINDOW_WIDTH // 2
+        self.net_width = WINDOW_WIDTH -120
         self.net_height = 16  # Half of the window height
 
         # Main game loop
@@ -27,7 +27,7 @@ class Game:
 
         self.ball = Ball(sprite_sheet, ball_x ,ball_y, ball_z, ball_radius)
 
-        self.power_bar = PowerBar(50, 50, 20, 150, 0, 100)
+        self.power_bar = PowerBar(30, 100, 20, 150, 0, 100)
 
         self.net = Net(sprite_sheet, self.net_width, self.net_height)
 
@@ -53,7 +53,7 @@ class Game:
         self.fourty_points = self.get_sprite(sprite_sheet, 2, 1, 16, 16)
 
         self.top_player_image = self.get_sprite(sprite_sheet, 0, 0, 16, 16)
-        self.bottom_player_image = self.get_sprite(sprite_sheet, 1, 0, 16, 16)
+        self.bottom_player_image = self.get_sprite(sprite_sheet, 4, 1, 16, 16)
 
         self.ball_image = self.get_sprite(sprite_sheet, 5, 0, 16, 16)
 
@@ -73,6 +73,28 @@ class Game:
         for y in range(0, WINDOW_HEIGHT, 16 * SCALE_FACTOR * 3):  # Step by sprite height
             for x in range(-32, WINDOW_WIDTH, 16 * SCALE_FACTOR * 3):  # Step by sprite width
                 self.screen.blit(scaled_image, (x, y))  # Draw grass at (x, y)
+
+    def draw_court(self):
+        line_width = 4
+        line_color = WHITE
+         # Baselines (top and bottom)
+        pygame.draw.line(self.screen, line_color, (50, 50), (WINDOW_WIDTH - 50, 50), line_width)  # Top baseline
+        pygame.draw.line(self.screen, line_color, (50, WINDOW_HEIGHT - 50), (WINDOW_WIDTH - 50, WINDOW_HEIGHT - 50), line_width)  # Bottom baseline
+
+        # Service lines (near the middle)
+        pygame.draw.line(self.screen, line_color, (50, WINDOW_HEIGHT // 2 - 100), (WINDOW_WIDTH - 50, WINDOW_HEIGHT // 2 - 100), line_width)  # Top service line
+        pygame.draw.line(self.screen, line_color, (50, WINDOW_HEIGHT // 2 + 100), (WINDOW_WIDTH - 50, WINDOW_HEIGHT // 2 + 100), line_width)  # Bottom service line
+
+        # Center service line
+        pygame.draw.line(self.screen, line_color, (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 100), (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 100), line_width)
+
+        # Sidelines (left and right)
+        pygame.draw.line(self.screen, line_color, (50, 50), (50, WINDOW_HEIGHT - 50), line_width)  # Left sideline
+        pygame.draw.line(self.screen, line_color, (WINDOW_WIDTH - 50, 50), (WINDOW_WIDTH - 50, WINDOW_HEIGHT - 50), line_width)  # Right sideline
+
+        # Center mark on baselines
+        pygame.draw.line(self.screen, line_color, (WINDOW_WIDTH // 2, 45), (WINDOW_WIDTH // 2, 55), line_width)  # Top center mark
+        pygame.draw.line(self.screen, line_color, (WINDOW_WIDTH // 2, WINDOW_HEIGHT - 55), (WINDOW_WIDTH // 2, WINDOW_HEIGHT - 45), line_width)  # Bottom center mark
 
     def convert_score_to_tennis_points(self,score):
             if score == 0:
@@ -273,9 +295,10 @@ class Game:
     def draw_game(self):
         # Fill the screen with black
         self.draw_grass()
+        self.draw_court()
 
-        self.top_player.draw(self.screen)
-        self.bottom_player.draw(self.screen)
+        self.top_player.draw(self.screen, self.ball)
+        self.bottom_player.draw(self.screen,self.ball)
        
         self.net.draw(self.screen)
         self.draw_scores()
