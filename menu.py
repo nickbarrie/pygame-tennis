@@ -31,7 +31,6 @@ class Menu:
         self.screen.blit(scaled_plaque_end, (WINDOW_WIDTH // 2 - title_text.get_width() // 2 - scaled_plaque.get_width(), 85))
         i = 0
         for i in range(0, title_text.get_width() // scaled_plaque.get_width() + 1):
-            print(i)
             self.screen.blit(scaled_plaque, (WINDOW_WIDTH // 2 - title_text.get_width() // 2 + i * scaled_plaque.get_width() , 85))
 
         self.screen.blit(scaled_plaque_end_flipped, (WINDOW_WIDTH // 2 + title_text.get_width() // 2, 85))

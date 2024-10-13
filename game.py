@@ -44,8 +44,18 @@ class Game:
         self.client = None
         self.player_id = 0  # Player's ID (0 or 1 for multiplayer)
 
-        self.grass_sprite = self.get_sprite(sprite_sheet, 48, 0, 16, 16)
-        self.score_plaque = self.get_sprite(sprite_sheet, 9 * SPRITE_SIZE, 0, 16, 16)
+        self.grass_sprite = self.get_sprite(sprite_sheet, 3, 0, 16, 16)
+        self.score_plaque = self.get_sprite(sprite_sheet, 9, 0, 16, 16)
+
+        self.zero_points = self.get_sprite(sprite_sheet, 3, 1, 16, 16)
+        self.fifteen_points = self.get_sprite(sprite_sheet, 0, 1, 16, 16)
+        self.thrity_points = self.get_sprite(sprite_sheet, 1, 1, 16, 16)
+        self.fourty_points = self.get_sprite(sprite_sheet, 2, 1, 16, 16)
+
+        self.top_player_image = self.get_sprite(sprite_sheet, 0, 0, 16, 16)
+        self.bottom_player_image = self.get_sprite(sprite_sheet, 1, 0, 16, 16)
+
+        self.ball_image = self.get_sprite(sprite_sheet, 5, 0, 16, 16)
 
     def set_state(self, new_state):
         self.game_state = new_state
@@ -53,7 +63,8 @@ class Game:
     def get_sprite(self, sprite_sheet, x, y, width, height):
         """Extracts a sprite from the sprite sheet."""
         sprite = pygame.Surface((width, height), pygame.SRCALPHA)
-        sprite.blit(sprite_sheet, (0, 0), (x, y, width, height))
+        sprite.blit(sprite_sheet, (0, 0), (x * SPRITE_SIZE, y * SPRITE_SIZE, width, height))
+        sprite = pygame.transform.scale(sprite, (SPRITE_SIZE * SCALE_FACTOR, SPRITE_SIZE * SCALE_FACTOR))
         return sprite
 
     def draw_grass(self):
@@ -65,37 +76,41 @@ class Game:
 
     def convert_score_to_tennis_points(self,score):
             if score == 0:
-                return 0
+                return self.zero_points
             elif score == 1:
-                return 15
+                return self.fifteen_points
             elif score == 2:
-                return 30
+                return self.thrity_points
             elif score == 3:
-                return 40
+                return self.fourty_points
             elif score >= 4:  # Only applies when player wins the game
                 return 50
             
     def draw_scores(self):
         # Render the text for both player and AI scores
-        score_plaque = pygame.transform.scale(self.score_plaque, ( SPRITE_SIZE* SCALE_FACTOR , SPRITE_SIZE* SCALE_FACTOR ))
-        score_plaque_flipped = pygame.transform.flip(score_plaque, True, False)
+        score_plaque_flipped = pygame.transform.flip(self.score_plaque, True, False)
 
-        self.screen.blit(score_plaque, (WINDOW_WIDTH - score_plaque.get_width(), 20))
+        self.screen.blit(self.score_plaque, (WINDOW_WIDTH - self.score_plaque.get_width(), 20))
         self.screen.blit(score_plaque_flipped, (0, 20))
 
         top_player_score = self.convert_score_to_tennis_points(self.top_player.score)
-        top_score = self.font.render(f"{top_player_score}", True, YELLOW)
-        top_sets = self.font.render(f"Sets: {self.top_player.sets}", True, YELLOW)
 
-        bottom_player_score = self.convert_score_to_tennis_points(self.bottom_player.score)
-        bottom_score = self.font.render(f"{bottom_player_score}", True, YELLOW)
-        bottom_sets = self.font.render(f"Sets: {self.bottom_player.sets}", True, YELLOW)
+
+        bottom_player_score = self.convert_score_to_tennis_points(self.bottom_player.score)   
+ 
 
         # Display the scores in the top left and right corners
-        self.screen.blit(top_score, (10 * SCALE_FACTOR, 30))
-        self.screen.blit(top_sets, (50, WINDOW_HEIGHT - 40 * SCALE_FACTOR))
-        self.screen.blit(bottom_score, ( WINDOW_WIDTH -20 * SCALE_FACTOR, 30))
-        self.screen.blit(bottom_sets, (50, WINDOW_HEIGHT - 20 * SCALE_FACTOR))
+        self.screen.blit(top_player_score, (2 * SCALE_FACTOR, 22))
+        self.screen.blit(bottom_player_score, ( WINDOW_WIDTH -20 * SCALE_FACTOR, 22))
+
+        self.screen.blit(self.top_player_image, (2 * SCALE_FACTOR, WINDOW_HEIGHT -130 ))
+        self.screen.blit(self.bottom_player_image, (2 * SCALE_FACTOR, WINDOW_HEIGHT -80 ))
+        for i in range(self.top_player.sets):
+            self.screen.blit(self.ball_image, (5 * SCALE_FACTOR + (i + 1) * (SPRITE_SIZE * SCALE_FACTOR/3), WINDOW_HEIGHT -130 ))
+
+        for i in range(self.bottom_player.sets):
+            self.screen.blit(self.ball_image, (5 * SCALE_FACTOR + ( i + 1) * (SPRITE_SIZE * SCALE_FACTOR/3), WINDOW_HEIGHT -80  ))
+
 
     def check_point(self):
         if self.ball.y < 0:
