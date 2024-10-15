@@ -325,7 +325,6 @@ class Game:
         self.check_point()
 
     def draw_game(self):
-        # Fill the screen with black
         self.draw_grass()
         self.draw_court()
 
@@ -389,6 +388,7 @@ def game_loop(game_state):
             elif game_state == "MULTIPLAYER":
                 game.handle_game_events()
                 game.update_game_multiplayer()
+                game.draw_game()
 
             elif game_state == "SINGLE_PLAYER":
                 game.load_single_player()
