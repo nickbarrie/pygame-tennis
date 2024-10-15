@@ -1,5 +1,4 @@
 import pygame
-import pygame.sprite
 from settings import WHITE, RED, WINDOW_HEIGHT, WINDOW_WIDTH, SCALE_FACTOR, SPRITE_SIZE
 import random as Random
 

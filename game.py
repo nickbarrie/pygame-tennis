@@ -9,6 +9,7 @@ from power_bar import PowerBar
 from net import Net
 from settings import *
 from menu import Menu
+import subprocess
 
 class Game:
     def __init__(self, screen, sprite_sheet, ball_x ,ball_y, ball_z, ball_radius):
@@ -27,7 +28,7 @@ class Game:
 
         self.ball = Ball(sprite_sheet, ball_x ,ball_y, ball_z, ball_radius)
 
-        self.power_bar = PowerBar(30, 100, 20, 150, 0, 100)
+        self.power_bar = PowerBar(20, 100, 20, 150, 0, 100)
 
         self.net = Net(sprite_sheet, self.net_width, self.net_height)
 
@@ -41,8 +42,12 @@ class Game:
         pygame.display.set_caption('Top-Down Tennis Game')
 
         # Network setup
-        self.client = None
+        self.port = 5555  # Default port, can be changed later
+        self.ip = ""
+        self.server = None  # Server for hosting, set later if hosting
+        self.client = None  # Client for joining, set later if joining
         self.player_id = 0  # Player's ID (0 or 1 for multiplayer)
+        self.server_process = None  # Server process for hosting
 
         self.grass_sprite = self.get_sprite(sprite_sheet, 3, 0, 16, 16)
         self.score_plaque = self.get_sprite(sprite_sheet, 9, 0, 16, 16)
@@ -56,6 +61,7 @@ class Game:
         self.bottom_player_image = self.get_sprite(sprite_sheet, 4, 1, 16, 16)
 
         self.ball_image = self.get_sprite(sprite_sheet, 5, 0, 16, 16)
+
 
     def set_state(self, new_state):
         self.game_state = new_state
@@ -125,13 +131,15 @@ class Game:
         self.screen.blit(top_player_score, (2 * SCALE_FACTOR, 22))
         self.screen.blit(bottom_player_score, ( WINDOW_WIDTH -20 * SCALE_FACTOR, 22))
 
-        self.screen.blit(self.top_player_image, (2 * SCALE_FACTOR, WINDOW_HEIGHT -130 ))
-        self.screen.blit(self.bottom_player_image, (2 * SCALE_FACTOR, WINDOW_HEIGHT -80 ))
+        # Draw top player's image and sets on the bottom left
+        self.screen.blit(self.top_player_image, (2 * SCALE_FACTOR, WINDOW_HEIGHT - 50))
         for i in range(self.top_player.sets):
-            self.screen.blit(self.ball_image, (5 * SCALE_FACTOR + (i + 1) * (SPRITE_SIZE * SCALE_FACTOR/3), WINDOW_HEIGHT -130 ))
+            self.screen.blit(self.ball_image, (5 * SCALE_FACTOR + (i + 1) * (SPRITE_SIZE * SCALE_FACTOR / 3), WINDOW_HEIGHT - 50))
 
+        # Draw bottom player's image and sets on the bottom right
+        self.screen.blit(self.bottom_player_image, (WINDOW_WIDTH - 2 * SCALE_FACTOR - self.bottom_player_image.get_width(), WINDOW_HEIGHT - 50))
         for i in range(self.bottom_player.sets):
-            self.screen.blit(self.ball_image, (5 * SCALE_FACTOR + ( i + 1) * (SPRITE_SIZE * SCALE_FACTOR/3), WINDOW_HEIGHT -80  ))
+            self.screen.blit(self.ball_image, (WINDOW_WIDTH - 5 * SCALE_FACTOR - (i + 1) * (SPRITE_SIZE * SCALE_FACTOR / 3), WINDOW_HEIGHT - 50))
 
 
     def check_point(self):
@@ -151,10 +159,20 @@ class Game:
                 self.top_player.score += 1
             self.ball.reset_ball()
 
-    def connect_to_server(self):
+    def connect_to_server(self, game_state):
         """ Connect to the multiplayer server """
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client.connect(('172.20.0.84', 5555))  # Connect to the server
+        ip = ""
+        print("Connecting to server")
+        if game_state == "HOST":
+            print("Host")
+            print(socket.gethostbyname(socket.gethostname()))
+            ip = socket.gethostbyname(socket.gethostname())
+            
+        if game_state == "JOIN":
+            ip = self.ip
+        print(f"Connecting to {ip}:{self.port}")
+        self.client.connect((ip, int(self.port)))  # Connect to the server
         self.player_id = pickle.loads(self.client.recv(2048))  # Receive player ID from the server
         print(f"Connected to the server as player {self.player_id}")
 
@@ -169,6 +187,22 @@ class Game:
     def load_single_player(self):
         """ Load single player game state """
         self.local_player = self.top_player
+        self.local_player.serving = True
+
+    def set_port(self, port):
+        self.port = int(port)
+
+    def set_ip(self, ip):
+        self.ip = ip
+
+    def host_game(self):
+        self.server_process = subprocess.Popen(["python", "server.py", str(self.port)])
+         
+    def stop_server(self):
+        if self.server_process:
+            self.server_process.terminate()
+            self.server_process.wait()
+
 
     def send_player_data(self):
         """ Send player data to the server """
@@ -251,12 +285,12 @@ class Game:
                 self.local_player.start_swing()
                 if self.power_bar.is_in_ideal_range():
                     serve_speed_y = self.local_player.swing_speed_y * self.local_player.serve_speed_multiplier * self.local_player.side
-                    serve_speed_x = self.local_player.swing_speed_x
-                    serve_speed_z = self.local_player.swing_speed_z
+                    serve_speed_x = self.local_player.swing_speed_x * self.local_player.serve_speed_multiplier
+                    serve_speed_z = self.local_player.swing_speed_z * self.local_player.serve_speed_multiplier
                 else:
                     serve_speed_y = self.local_player.swing_speed_y * self.local_player.side
                     serve_speed_x = self.local_player.swing_speed_x * self.local_player.serve_speed_multiplier
-                    serve_speed_z = self.local_player.swing_speed_z
+                    serve_speed_z = self.local_player.swing_speed_z * self.local_player.serve_speed_multiplier
 
                 self.ball.serve(serve_speed_x, serve_speed_y, serve_speed_z, self.local_player.x, self.local_player.y)
                 self.local_player.serving = False  # Stop the serving process
@@ -335,26 +369,53 @@ def game_loop(game_state):
 
     if game_state == "MULTIPLAYER":
         game.connect_to_server()  # Add this line
+    try:
+        while True:
+            if game_state == "MENU":
+                menu.draw()
+                game_state = menu.handle_menu_events(game_state)
+            
+            elif game_state == "HOST":
+                game.set_port(menu.selected_port)
+                game.host_game()  # Start hosting the game
+                print("Hosting")
+                game.connect_to_server(game_state)
+                game_state = "MULTIPLAYER"
+                print("Joining")
 
-    while True:
-        if game_state == "MENU":
-            menu.draw()
-            game_state = menu.handle_menu_events(game_state)
-        elif game_state == "MULTIPLAYER":
-            if not game.local_player:
-                game.connect_to_server()  # Ensure we connect if not already connected
-            game.handle_game_events()
-            game.update_game_multiplayer()
-            game.draw_game()
-        elif game_state == "GAME":
-            if not game.local_player:
+
+            elif game_state == "JOIN":
+                game.set_port(menu.selected_port)
+                game.set_ip(menu.selected_ip)
+                game.connect_to_server(game_state)
+                game_state = "MULTIPLAYER"
+
+            elif game_state == "MULTIPLAYER":
+                game.handle_game_events()
+                game.update_game_multiplayer()
+
+            elif game_state == "SINGLE_PLAYER":
                 game.load_single_player()
-            game.handle_game_events()
-            game.update_game()
-            game.draw_game()
+                game_state = "GAME"
+
+            elif game_state == "MULTIPLAYER":
+                game.handle_game_events()
+                game.update_game_multiplayer()
+                game.draw_game()
+
+            elif game_state == "GAME":
+                game.handle_game_events()
+                game.update_game()
+                game.draw_game() 
+    finally:
+        game.stop_server()
+        pygame.quit()
 
 
 
 game_state = "MENU"
 
 game_loop(game_state)
+
+
+

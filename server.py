@@ -8,6 +8,7 @@ from net import Net
 import sys
 import random
 import pygame
+import argparse
 
 
 class GameServer:
@@ -276,10 +277,12 @@ class GameServer:
         conn.close()
         self.clients.remove(conn)
 
-def start_server():
+def start_server(port):
 
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind(('172.20.0.84', 5555))  # Bind to localhost on port 5555
+    local_ip = socket.gethostbyname(socket.gethostname())
+
+    server.bind((local_ip, port))  # Bind to localhost on port 5555
     server.listen(2)  # We only need 2 connections for local multiplayer
     game_server = GameServer()
     game_server.determine_server()
@@ -302,5 +305,11 @@ def start_server():
             server.close()  # Close the server socket
             sys.exit(0)  # Exit the program gracefully
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Start the game server.")
+    parser.add_argument("port", type=int, help="Port number to start the server on")
+    return parser.parse_args()
+
 if __name__ == "__main__":
-    start_server()
+    args = parse_args()
+    start_server(args.port)

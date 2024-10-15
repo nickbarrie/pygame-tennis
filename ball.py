@@ -37,9 +37,7 @@ class Ball(pygame.sprite.Sprite):
             ball_rect = pygame.Rect(self.x - self.radius, self.y - self.radius, self.radius * 2, self.radius * 2)
             net_rect = pygame.Rect(net.x, net.y, net.width, net.height)
             if ball_rect.colliderect(net_rect):
-                self.speed_x *= -0.2  # Reverse speed with some energy loss
                 self.speed_y *= -0.2
-                self.speed_z *= -0.2  # Simulate a bounce upward if needed
                 return True
         return False
 
@@ -62,7 +60,7 @@ class Ball(pygame.sprite.Sprite):
         return self.speed_z == 0 and self.z == 0 and self.speed_x == 0 and self.speed_y == 0
 
     def apply_friction(self):
-        drag_coefficient = 0.995  # Simulate friction or air resistance
+        drag_coefficient = 0.997  # Simulate friction or air resistance
         cutoff_speed = 0.1 
         
         self.speed_x *= drag_coefficient
@@ -82,12 +80,12 @@ class Ball(pygame.sprite.Sprite):
     
     def apply_gravity(self):
         if self.z > 0:
-            self.speed_z -= 0.03
+            self.speed_z -= 0.035
 
 
     def apply_bounce(self):
         if self.z < 0:  
-            self.speed_z *= -0.8
+            self.speed_z *= -0.9
             self.bounce_count += 1 
 
     def apply_spin(self):
@@ -121,7 +119,7 @@ class Ball(pygame.sprite.Sprite):
     def draw(self,screen):
         
         min_z = 0
-        max_z = 20
+        max_z = 50
         min_radius = 10
         max_radius = 20
         scaled_radius = self.scale_radius(min_z, max_z, min_radius, max_radius)
