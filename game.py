@@ -163,9 +163,7 @@ class Game:
         """ Connect to the multiplayer server """
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         ip = ""
-        print("Connecting to server")
         if game_state == "HOST":
-            print("Host")
             print(socket.gethostbyname(socket.gethostname()))
             ip = socket.gethostbyname(socket.gethostname())
             
@@ -378,10 +376,8 @@ def game_loop(game_state):
             elif game_state == "HOST":
                 game.set_port(menu.selected_port)
                 game.host_game()  # Start hosting the game
-                print("Hosting")
                 game.connect_to_server(game_state)
                 game_state = "MULTIPLAYER"
-                print("Joining")
 
 
             elif game_state == "JOIN":

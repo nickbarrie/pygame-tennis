@@ -31,7 +31,6 @@ class GameServer:
     def determine_server(self):
         """ Switch server when the ball is not in play """
         if not self.ball.served :
-            print("Determining server...")
             self.player_1.serving = not self.player_1.serving
             self.player_2.serving = not self.player_2.serving
 
@@ -45,7 +44,6 @@ class GameServer:
                 self.player_1.serving = False
                 self.player_2.serving = True
 
-        print("Player 1 serving: %s, Player 2 serving: %s" % (self.player_1.serving, self.player_2.serving))
         self.game_state['players'][0]['serving'] = self.player_1.serving
         self.game_state['players'][1]['serving'] = self.player_2.serving
 
@@ -281,7 +279,7 @@ def start_server(port):
 
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     local_ip = socket.gethostbyname(socket.gethostname())
-
+    print(f"Server IP: {local_ip}")
     server.bind((local_ip, port))  # Bind to localhost on port 5555
     server.listen(2)  # We only need 2 connections for local multiplayer
     game_server = GameServer()
