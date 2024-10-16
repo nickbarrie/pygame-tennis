@@ -1,5 +1,3 @@
-import socket
-import pickle
 import pygame
 import sys
 from random import Random
@@ -9,10 +7,10 @@ from power_bar import PowerBar
 from net import Net
 from settings import *
 from menu import Menu
-import subprocess
+from network_manager import NetworkManager
 
 class Game:
-    def __init__(self, screen, sprite_sheet, ball_x ,ball_y, ball_z, ball_radius):
+    def __init__(self, screen, sprite_sheet, ball_x ,ball_y, ball_z, ball_radius, network_manager):
 
       
 
@@ -21,6 +19,8 @@ class Game:
 
         # Main game loop
         self.clock = pygame.time.Clock()
+
+        self.network_manager = NetworkManager()
 
         self.top_player = Player(sprite_sheet,WINDOW_WIDTH // 2, 50, 4, 1)
 
@@ -49,19 +49,18 @@ class Game:
         self.player_id = 0  # Player's ID (0 or 1 for multiplayer)
         self.server_process = None  # Server process for hosting
 
+        self.load_sprites(sprite_sheet)
+
+    def load_sprites(self, sprite_sheet):
         self.grass_sprite = self.get_sprite(sprite_sheet, 3, 0, 16, 16)
         self.score_plaque = self.get_sprite(sprite_sheet, 9, 0, 16, 16)
-
         self.zero_points = self.get_sprite(sprite_sheet, 3, 1, 16, 16)
         self.fifteen_points = self.get_sprite(sprite_sheet, 0, 1, 16, 16)
-        self.thrity_points = self.get_sprite(sprite_sheet, 1, 1, 16, 16)
+        self.thirty_points = self.get_sprite(sprite_sheet, 1, 1, 16, 16)
         self.fourty_points = self.get_sprite(sprite_sheet, 2, 1, 16, 16)
-
         self.top_player_image = self.get_sprite(sprite_sheet, 0, 0, 16, 16)
         self.bottom_player_image = self.get_sprite(sprite_sheet, 4, 1, 16, 16)
-
         self.ball_image = self.get_sprite(sprite_sheet, 5, 0, 16, 16)
-
 
     def set_state(self, new_state):
         self.game_state = new_state
@@ -159,51 +158,24 @@ class Game:
                 self.top_player.score += 1
             self.ball.reset_ball()
 
-    def connect_to_server(self, game_state):
-        """ Connect to the multiplayer server """
-        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        ip = ""
-        if game_state == "HOST":
-            print(socket.gethostbyname(socket.gethostname()))
-            ip = socket.gethostbyname(socket.gethostname())
-            
-        if game_state == "JOIN":
-            ip = self.ip
-        print(f"Connecting to {ip}:{self.port}")
-        self.client.connect((ip, int(self.port)))  # Connect to the server
-        self.player_id = pickle.loads(self.client.recv(2048))  # Receive player ID from the server
-        print(f"Connected to the server as player {self.player_id}")
-
-        if self.player_id == 0:
-            self.local_player = self.top_player  # Player 1
-            self.remote_player = self.bottom_player  # Player 2 (opponent)
-
-        else:
-            self.local_player = self.bottom_player  # Player 1
-            self.remote_player = self.top_player  # Player 2 (opponent)
-
     def load_single_player(self):
         """ Load single player game state """
         self.local_player = self.top_player
         self.local_player.serving = True
 
-    def set_port(self, port):
-        self.port = int(port)
+    def load_multiplayer(self):
+        print("Loading multiplayer game state")
+        print(f"Player ID: {self.player_id}")
+        if self.player_id == 0:
+            self.local_player = self.top_player  # Player 1
+            self.remote_player = self.bottom_player  # Player 2 (opponent)
+        else:
+            self.local_player = self.bottom_player  # Player 1
+            self.remote_player = self.top_player  # Player 2 (opponent)
 
-    def set_ip(self, ip):
-        self.ip = ip
-
-    def host_game(self):
-        self.server_process = subprocess.Popen(["python", "server.py", str(self.port)])
-         
-    def stop_server(self):
-        if self.server_process:
-            self.server_process.terminate()
-            self.server_process.wait()
-
-
-    def send_player_data(self):
-        """ Send player data to the server """
+    def update_game_multiplayer(self):
+        """ Update the game state in multiplayer mode """
+        # Send player data to the server
         player_data = {
             'x': self.local_player.x,
             'y': self.local_player.y,
@@ -212,32 +184,10 @@ class Game:
             'speed_y': self.ball.speed_y,
             'speed_z': self.ball.speed_z,
         }
-        # Send player data to the server
-        self.client.sendall(pickle.dumps(player_data))
-    
-
-
-    def receive_game_state(self):
-        """ Receive the updated game state from the server """
-        data = b""
-        while True:
-            part = self.client.recv(2048)
-            data += part
-            if len(part) < 2048:
-                break  # Break if the last packet is smaller than the buffer size
-        try:
-            return pickle.loads(data)
-        except Exception as e:
-            print(f"Error receiving game state: {e}")
-            return None
-
-    def update_game_multiplayer(self):
-        """ Update the game state in multiplayer mode """
-        # Send player data to the server
-        self.send_player_data()
+        self.network_manager.send_player_data(player_data)
         
         # Receive updated game state from the server
-        game_state = self.receive_game_state()
+        game_state = self.network_manager.receive_game_state()
 
         if game_state:
             # Update the remote player's position and swing state from the game state
@@ -261,21 +211,28 @@ class Game:
             self.ball.served = game_state['ball']['served']
             self.ball.angle = game_state['ball']['angle']
 
+    def handle_resize_event(self, event):
+        global WINDOW_WIDTH, WINDOW_HEIGHT
+        WINDOW_WIDTH, WINDOW_HEIGHT = event.w, event.h
+        self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.RESIZABLE)
+
+    def handle_key_events(self, event):
+        if event.key == pygame.K_SPACE:
+            if self.ball.served:
+                self.local_player.start_swing()
+        if event.key == pygame.K_ESCAPE:
+            self.set_state("MENU")
+
     def handle_game_events(self):
         keys = pygame.key.get_pressed()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            elif event.type == pygame.VIDEORESIZE:
-                WINDOW_WIDTH, WINDOW_HEIGHT = event.w, event.h
-                self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.RESIZABLE)
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                   if self.ball.served:
-                        self.local_player.start_swing()
-                if event.key == pygame.K_ESCAPE:
-                    self.set_state("MENU")
+                self.handle_key_events(event)
+            elif event.type == pygame.VIDEORESIZE:
+                self.handle_resize_event(event)
 
         if self.local_player.serving:
             self.power_bar.update()
@@ -355,17 +312,13 @@ def game_loop(game_state):
     ball_x = WINDOW_WIDTH // 2
     ball_y = WINDOW_HEIGHT // 2
     ball_z = 1
-    ball_speed_x = 4
-    ball_speed_y = 4
-    ball_speed_z = 0
+
+    network_manager = NetworkManager()
 
 
-
-    game = Game(screen,sprite_sheet, ball_x ,ball_y, ball_z, ball_radius)
+    game = Game(screen,sprite_sheet, ball_x ,ball_y, ball_z, ball_radius, network_manager)
     menu = Menu(game.screen, sprite_sheet)
 
-    if game_state == "MULTIPLAYER":
-        game.connect_to_server()  # Add this line
     try:
         while True:
             if game_state == "MENU":
@@ -373,16 +326,19 @@ def game_loop(game_state):
                 game_state = menu.handle_menu_events(game_state)
             
             elif game_state == "HOST":
-                game.set_port(menu.selected_port)
-                game.host_game()  # Start hosting the game
-                game.connect_to_server(game_state)
+                game.network_manager.set_port(menu.selected_port)
+                game.network_manager.host_game()  # Start hosting the game
+                game.player_id = game.network_manager.connect_to_server(game_state)
+                game.load_multiplayer()
+
                 game_state = "MULTIPLAYER"
 
 
             elif game_state == "JOIN":
-                game.set_port(menu.selected_port)
-                game.set_ip(menu.selected_ip)
-                game.connect_to_server(game_state)
+                game.network_manager.set_port(menu.selected_port)
+                game.network_manager.set_ip(menu.selected_ip)
+                game.player_id = game.network_manager.connect_to_server(game_state)
+                game.load_multiplayer()
                 game_state = "MULTIPLAYER"
 
             elif game_state == "MULTIPLAYER":
@@ -394,17 +350,12 @@ def game_loop(game_state):
                 game.load_single_player()
                 game_state = "GAME"
 
-            elif game_state == "MULTIPLAYER":
-                game.handle_game_events()
-                game.update_game_multiplayer()
-                game.draw_game()
-
             elif game_state == "GAME":
                 game.handle_game_events()
                 game.update_game()
                 game.draw_game() 
     finally:
-        game.stop_server()
+        game.network_manager.stop_server()
         pygame.quit()
 
 
