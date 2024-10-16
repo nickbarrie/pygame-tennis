@@ -107,7 +107,7 @@ class Game:
             elif score == 1:
                 return self.fifteen_points
             elif score == 2:
-                return self.thrity_points
+                return self.thirty_points
             elif score == 3:
                 return self.fourty_points
             elif score >= 4:  # Only applies when player wins the game
